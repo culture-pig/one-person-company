@@ -11,6 +11,7 @@
   task add|set|list    任务派发与进度
   gate                 门禁判定
   phase                更新当前阶段
+  ack                  归档待裁决（原文保留，只是不再计入待办）
   status               打印公司现状
   build                从状态生成自包含的 dashboard.html
 """
@@ -291,29 +292,88 @@ def cmd_status(args):
         sum(1 for m in msgs if m["channel"] == "group"),
         sum(1 for m in msgs if m["channel"] != "group")))
     pend = pending_decisions(msgs)
+    pend_ids = {m["id"] for m in pend}
+    archived = sum(
+        1 for m in msgs
+        if m["channel"] != "group"
+        and m["kind"] in ("CHALLENGE", "RISK", "DECIDE")
+        and m["id"] not in pend_ids
+    )
     print("待裁决：%d 条" % len(pend))
     for p in pend:
         print("  · %s [%s] %s" % (p["from"], KINDS[p["kind"]][0], p["text"][:50]))
+    print("已归档：%d 条（原文仍在私聊记录里）" % archived)
     return 0
 
 
 def pending_decisions(msgs):
-    """每个私聊线程里，最后一条 DECISION 之后的 CHALLENGE/RISK/DECIDE 都算待处理。"""
+    """待老板拍板的事。
+
+    一条私聊消息算待办，需同时满足：
+      1. 类型是 CHALLENGE / RISK / DECIDE
+      2. 没被显式归档（handled）
+      3. 同通道内它之后没有出现过 DECISION
+
+    第 3 条兼容早期数据：老消息没有 handled 字段，靠裁决自动闭环。
+    """
     out = []
     per_channel = {}
-    for m in msgs:
+    for i, m in enumerate(msgs):
         if m["channel"] == "group":
             continue
-        per_channel.setdefault(m["channel"], []).append(m)
+        per_channel.setdefault(m["channel"], []).append((i, m))
     for ch, items in per_channel.items():
         last_decision = -1
-        for i, m in enumerate(items):
+        for i, m in items:
             if m["kind"] == "DECISION":
                 last_decision = i
-        for m in items[last_decision + 1:]:
-            if m["kind"] in ("CHALLENGE", "RISK", "DECIDE"):
+        for i, m in items:
+            if m["kind"] in ("CHALLENGE", "RISK", "DECIDE") and not m.get("handled") and i > last_decision:
                 out.append(m)
     return out
+
+
+# ---------------------------------------------------------------- ack
+
+def cmd_ack(args):
+    root = Path(args.dir).resolve()
+    data = load(messages_path(root), {"seq": 0, "items": []})
+    pend = {m["id"] for m in pending_decisions(data["items"])}
+
+    if not args.id and not (args.channel and args.all):
+        print("用法：opc ack --id M020 [--id M027]")
+        print("      opc ack --channel dm:qa --all")
+        return 2
+
+    if not pend:
+        print("没有待裁决的事，不用归档。")
+        return 0
+
+    count = 0
+    hit_ids = []
+    for m in data["items"]:
+        if m["id"] not in pend:
+            continue
+        hit = m["id"] in args.id if args.id else (args.all and m["channel"] == args.channel)
+        if not hit:
+            continue
+        m["handled"] = True
+        m["handled_at"] = now()
+        if args.reason:
+            m["handled_note"] = args.reason
+        count += 1
+        hit_ids.append(m["id"])
+
+    if not count:
+        print("没有匹配的待裁决条目。当前待办：%s" % "、".join(sorted(pend)))
+        return 1
+
+    save(messages_path(root), data)
+    print("已归档 %d 条：%s" % (count, "、".join(hit_ids)))
+    print("注意：归档不是删除，原文仍在对应员工的私聊记录里，只是不再计入待办。")
+    left = pending_decisions(data["items"])
+    print("剩余待裁决：%d 条" % len(left))
+    return 0
 
 
 # ---------------------------------------------------------------- build
@@ -392,6 +452,13 @@ def main():
 
     p = sub.add_parser("status", help="现状")
     p.set_defaults(func=cmd_status)
+
+    p = sub.add_parser("ack", help="归档待裁决（不删除原文）")
+    p.add_argument("--id", action="append", default=[], help="消息编号，可重复")
+    p.add_argument("--channel", default="", help="dm:<代号>，配合 --all 使用")
+    p.add_argument("--all", action="store_true", help="归档该通道全部待裁决")
+    p.add_argument("--reason", default="", help="归档理由")
+    p.set_defaults(func=cmd_ack)
 
     p = sub.add_parser("build", help="生成工作台")
     p.set_defaults(func=cmd_build)

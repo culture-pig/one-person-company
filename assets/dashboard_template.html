@@ -269,13 +269,20 @@ function renderOffice(){
       <div class="pend-act">
         <button class="btn" data-copy="${esc(m.id)}|A">回复 A</button>
         <button class="btn" data-copy="${esc(m.id)}|B">回复 B</button>
-        <button class="btn" data-copy="${esc(m.id)}|">复制指令</button>
+        <button class="btn" data-ack="${esc(m.id)}">归档</button>
       </div>
     </div>`;
-  }).join("");
-  inner.querySelectorAll(".btn").forEach(b => b.onclick = () => {
+  }).join("") + `<div class="empty" style="padding:22px 0 6px">归档不是删除 · 原文仍在对应员工的私聊记录里，只是不再计入待办</div>`;
+  inner.querySelectorAll("[data-ack]").forEach(b => b.onclick = () => {
+    const id = b.dataset.ack;
+    const m = OPC.messages.find(x => x.id === id) || {};
+    const e = emp[m.from] || {name:"员工"};
+    const txt = `归档 ${id}（${e.name}的${OPC.kinds[m.kind]||m.kind}）`;
+    copy(txt); toast("已复制：" + txt);
+  });
+  inner.querySelectorAll("[data-copy]").forEach(b => b.onclick = () => {
     const [id, choice] = b.dataset.copy.split("|");
-    const m = OPC.messages.find(x=>x.id===id);
+    const m = OPC.messages.find(x=>x.id===id) || {};
     const empId = (m.channel||"").replace("dm:","");
     const txt = choice ? `${empId} 裁决：选 ${choice}` : `我回复 ${empId}：`;
     copy(txt); toast("已复制：" + txt);
