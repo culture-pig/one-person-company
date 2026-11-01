@@ -152,6 +152,7 @@ $OPC serve --open                            # 浏览器里打开工作台（可
 ```
 one-person-company/
 ├── SKILL.md                      技能主入口：四条铁律、档位表、标准动作
+├── CHANGELOG.md                  人工整理的完整更新历史
 ├── references/
 │   ├── roles.md                  七人职责、不做什么、私聊触发条件
 │   └── protocol.md               双通道硬规则、门禁、产物链
@@ -159,8 +160,10 @@ one-person-company/
 │   └── opc.py                    状态内核（625 行，纯标准库，无依赖）
 ├── assets/
 │   └── dashboard_template.html   工作台模板
-└── demo/
-    └── dashboard-preview.html    演示数据生成的工作台，可直接打开
+├── demo/
+│   └── dashboard-preview.html    演示数据生成的工作台，可直接打开
+└── .github/workflows/
+    └── release-notes.yml         每次 push 自动生成 Release 说明
 ```
 
 ## 设计取舍（不假装做到的事）
@@ -189,6 +192,15 @@ one-person-company/
 
 **Q：跑起来一堆文件，会不会很乱？**
 全在 `.opc/` 一个目录里，加进 `.gitignore` 就看不见了。
+
+## 更新记录
+
+每次 push 到 `main`，GitHub Actions 会自动把本次提交按「新功能 / 修复 / 文档 / 其他」归类，发布成一个 Release。
+
+- **最新一次更新** → 仓库右侧 [Releases](../../releases)
+- **完整历史** → [CHANGELOG.md](CHANGELOG.md)
+
+所以写提交说明时带上 `feat:` `fix:` `docs:` 前缀，更新说明才会分类正确。
 
 ## 许可
 

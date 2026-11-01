@@ -1,0 +1,66 @@
+name: 更新说明
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  release-notes:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 按类型归类本次提交
+        run: |
+          PREV=$(git describe --tags --abbrev=0 2>/dev/null || true)
+          if [ -z "$PREV" ]; then
+            RANGE=""
+            echo "首次发布，汇总全部历史"
+          else
+            RANGE="${PREV}..HEAD"
+            echo "对比 $PREV 之后的变化"
+          fi
+          LOG=$(git log ${RANGE} --pretty=format:"%s" || true)
+
+          group() {
+            local pat="$1" inv="$2" out
+            if [ -n "$inv" ]; then
+              out=$(printf '%s\n' "$LOG" | grep -vE "$pat" | sed 's/^/- /' || true)
+            else
+              out=$(printf '%s\n' "$LOG" | grep -E "$pat" | sed 's/^/- /' || true)
+            fi
+            if [ -z "$out" ]; then echo "- 无"; else printf '%s\n' "$out"; fi
+          }
+
+          {
+            echo "### 新功能"
+            echo
+            group "^feat" ""
+            echo
+            echo "### 修复"
+            echo
+            group "^fix" ""
+            echo
+            echo "### 文档"
+            echo
+            group "^docs" ""
+            echo
+            echo "### 其他"
+            echo
+            group "^(feat|fix|docs)" "inv"
+          } > NOTES.md
+
+          cat NOTES.md
+
+      - name: 发布 Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v0.${{ github.run_number }}
+          name: v0.${{ github.run_number }}
+          body_path: NOTES.md
+          make_latest: true
