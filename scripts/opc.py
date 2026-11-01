@@ -14,6 +14,7 @@
   ack                  归档待裁决（原文保留，只是不再计入待办）
   status               打印公司现状
   build                从状态生成自包含的 dashboard.html
+  serve                本地起服务，浏览器里直接发话、归档（真写入）
 """
 
 import argparse
@@ -54,6 +55,7 @@ KINDS = {
     "TASK":     ("派活",   "group"),
     "PROGRESS": ("进度",   "group"),
     "DELIVER":  ("交付",   "group"),
+    "BOSS":     ("老板指令", "group"),
     "CHALLENGE":("方案分歧", "dm"),
     "RISK":     ("风险预警", "dm"),
     "DECIDE":   ("请求裁决", "dm"),
@@ -378,23 +380,11 @@ def cmd_ack(args):
 
 # ---------------------------------------------------------------- build
 
-def cmd_build(args):
-    root = Path(args.dir).resolve()
+def build_payload(root):
     c = load(company_path(root), None)
-    if not c:
-        print("公司还没初始化，先跑 opc init")
-        return 1
-
     tasks = load(tasks_path(root), {"seq": 0, "items": []})["items"]
     msgs = load(messages_path(root), {"seq": 0, "items": []})["items"]
-
-    tpl_path = Path(__file__).resolve().parent.parent / "assets" / "dashboard_template.html"
-    if not tpl_path.exists():
-        print("缺模板：%s" % tpl_path)
-        return 1
-    tpl = tpl_path.read_text(encoding="utf-8")
-
-    payload = {
+    return {
         "company": c,
         "tasks": tasks,
         "messages": msgs,
@@ -402,12 +392,171 @@ def cmd_build(args):
         "pending": [m["id"] for m in pending_decisions(msgs)],
         "generated": now(),
     }
-    html = tpl.replace("/*__OPC_DATA__*/", json.dumps(payload, ensure_ascii=False))
+
+
+def render_html(root):
+    tpl_path = Path(__file__).resolve().parent.parent / "assets" / "dashboard_template.html"
+    if not tpl_path.exists():
+        raise FileNotFoundError("缺模板：%s" % tpl_path)
+    tpl = tpl_path.read_text(encoding="utf-8")
+    payload = build_payload(root)
+    return tpl.replace("/*__OPC_DATA__*/", json.dumps(payload, ensure_ascii=False))
+
+
+def cmd_build(args):
+    root = Path(args.dir).resolve()
+    if not company_path(root).exists():
+        print("公司还没初始化，先跑 opc init")
+        return 1
+    try:
+        html = render_html(root)
+    except FileNotFoundError as e:
+        print(e)
+        return 1
     out = opc_dir(root) / "dashboard.html"
     out.write_text(html, encoding="utf-8")
     print("工作台已生成：%s" % out)
-    print("用法：打开它就能看到群聊和每个人的对话框。")
+    print("想直接在浏览器里用（输入框真的能写入）：opc serve --open")
     return 0
+
+
+# ---------------------------------------------------------------- serve
+
+def cmd_serve(args):
+    """本地起一个小服务，让工作台真正可写。
+
+    只监听 127.0.0.1，不对外、不需要鉴权、不开防火墙。
+    """
+    import threading
+    import webbrowser
+    from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
+
+    root = Path(args.dir).resolve()
+    if not company_path(root).exists():
+        print("公司还没初始化，先跑 opc init")
+        return 1
+
+    def append_message(channel, kind, text, sender="boss"):
+        data = load(messages_path(root), {"seq": 0, "items": []})
+        data["seq"] += 1
+        data["items"].append({
+            "id": "M%03d" % data["seq"],
+            "ts": now(),
+            "channel": channel,
+            "from": sender,
+            "kind": kind,
+            "task": "",
+            "text": text,
+        })
+        save(messages_path(root), data)
+        return data["items"][-1]["id"]
+
+    def mark_handled(ids):
+        data = load(messages_path(root), {"seq": 0, "items": []})
+        pend = {m["id"] for m in pending_decisions(data["items"])}
+        n = 0
+        for m in data["items"]:
+            if m["id"] in pend and m["id"] in ids:
+                m["handled"] = True
+                m["handled_at"] = now()
+                n += 1
+        save(messages_path(root), data)
+        return n
+
+    class Handler(BaseHTTPRequestHandler):
+        server_version = "opc/1.2"
+
+        def log_message(self, fmt, *a):
+            pass
+
+        def _send(self, body, ctype, code=200):
+            raw = body.encode("utf-8")
+            self.send_response(code)
+            self.send_header("Content-Type", ctype)
+            self.send_header("Content-Length", str(len(raw)))
+            self.send_header("Cache-Control", "no-store")
+            self.end_headers()
+            self.wfile.write(raw)
+
+        def _json(self, obj, code=200):
+            self._send(json.dumps(obj, ensure_ascii=False), "application/json; charset=utf-8", code)
+
+        def do_GET(self):
+            path = self.path.split("?")[0]
+            if path in ("/", "/index.html"):
+                try:
+                    self._send(render_html(root), "text/html; charset=utf-8")
+                except Exception as e:
+                    self._send("<pre>%s</pre>" % e, "text/html; charset=utf-8", 500)
+            elif path == "/api/state":
+                self._json(build_payload(root))
+            elif path == "/api/ping":
+                self._json({"ok": True, "company": root.name})
+            else:
+                self._send("not found", "text/plain; charset=utf-8", 404)
+
+        def do_POST(self):
+            path = self.path.split("?")[0]
+            try:
+                length = int(self.headers.get("Content-Length") or 0)
+                body = json.loads(self.rfile.read(length) or b"{}")
+            except Exception:
+                self._json({"ok": False, "error": "bad json"}, 400)
+                return
+
+            if path == "/api/msg":
+                channel = (body.get("channel") or "").strip()
+                kind = (body.get("kind") or "").strip().upper()
+                text = (body.get("text") or "").strip()
+                if channel not in ("group",) and not channel.startswith("dm:"):
+                    self._json({"ok": False, "error": "channel 非法"}, 400)
+                    return
+                if kind not in KINDS or kind in ("TASK", "PROGRESS", "DELIVER"):
+                    self._json({"ok": False, "error": "工作台只能发 BOSS / DECISION 类消息"}, 400)
+                    return
+                if not text:
+                    self._json({"ok": False, "error": "内容为空"}, 400)
+                    return
+                mid = append_message(channel, kind, text)
+                self._json({"ok": True, "id": mid, "state": build_payload(root)})
+
+            elif path == "/api/ack":
+                ids = body.get("ids") or []
+                if isinstance(ids, str):
+                    ids = [ids]
+                n = mark_handled(set(ids))
+                self._json({"ok": True, "handled": n, "state": build_payload(root)})
+
+            else:
+                self._json({"ok": False, "error": "not found"}, 404)
+
+    port = args.port
+    srv = None
+    for p in range(port, port + 12):
+        try:
+            srv = ThreadingHTTPServer(("127.0.0.1", p), Handler)
+            port = p
+            break
+        except OSError:
+            continue
+    if srv is None:
+        print("端口 %d 起都被占用，换个 --port 试试" % args.port)
+        return 1
+
+    url = "http://127.0.0.1:%d/" % port
+    print("工作台已启动：%s" % url)
+    print("公司：%s" % root.name)
+    print("这个服务只监听本机，关掉窗口或按 Ctrl+C 就停。输入框和归档按钮会真的写入 .opc/。")
+    if args.open:
+        threading.Timer(0.6, lambda: webbrowser.open(url)).start()
+    try:
+        srv.serve_forever()
+    except KeyboardInterrupt:
+        print("\n已停止。")
+    finally:
+        srv.server_close()
+    return 0
+
 
 
 # ---------------------------------------------------------------- main
@@ -462,6 +611,11 @@ def main():
 
     p = sub.add_parser("build", help="生成工作台")
     p.set_defaults(func=cmd_build)
+
+    p = sub.add_parser("serve", help="本地起工作台服务，输入框真的能写入")
+    p.add_argument("--port", type=int, default=8765, help="起始端口，默认 8765，被占用会自动往后找")
+    p.add_argument("--open", action="store_true", help="启动后自动用默认浏览器打开")
+    p.set_defaults(func=cmd_serve)
 
     args = ap.parse_args()
     return args.func(args) or 0

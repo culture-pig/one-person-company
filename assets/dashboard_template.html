@@ -15,7 +15,9 @@
   .app { display: flex; height: 100vh; overflow: hidden; }
 
   /* ---------- 侧栏 ---------- */
-  .side { width: 292px; flex: 0 0 292px; background: #f7f7f4; border-right: 1px solid #e6e6e1; display: flex; flex-direction: column; }
+  .side { width: 292px; flex: 0 0 292px; background: #f7f7f4; border-right: 1px solid #e6e6e1; display: flex; flex-direction: column; min-width: 180px; }
+  .resizer { flex: 0 0 6px; cursor: col-resize; background: transparent; transition: background .12s; }
+  .resizer:hover, .resizer.on { background: #dedeD6; }
   .side-head { padding: 16px 16px 12px; border-bottom: 1px solid #ebebe6; }
   .brand { font-size: 15px; font-weight: 600; letter-spacing: -0.2px; }
   .phase { margin-top: 6px; display: inline-block; font-size: 11px; color: #5f5e5a; background: #edece6; border-radius: 5px; padding: 3px 7px; }
@@ -70,6 +72,7 @@
   .t-RISK { background: #fcebeb; color: #a32d2d; }
   .t-DECIDE { background: #eeedfe; color: #534ab7; }
   .t-DECISION { background: #221f1a; color: #fff; }
+  .t-BOSS { background: #e8e8e1; color: #3d3d39; }
 
   .card { border-left: 3px solid #d8d8d1; padding-left: 10px; }
   .card.k-TASK { border-left-color: #1d9e75; }
@@ -78,6 +81,7 @@
   .card.k-CHALLENGE { border-left-color: #ef9f27; }
   .card.k-RISK { border-left-color: #e24b4a; }
   .card.k-DECIDE { border-left-color: #7f77dd; }
+  .card.k-BOSS { border-left-color: #888780; }
   .bar { height: 3px; background: #e6e6e1; border-radius: 2px; margin-top: 8px; overflow: hidden; }
   .bar > i { display: block; height: 100%; background: #378add; border-radius: 2px; }
   .tid { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px; color: #8b8b83; }
@@ -121,6 +125,7 @@
     <div class="side-list" id="sideList"></div>
     <div class="side-foot" id="sideFoot"></div>
   </aside>
+  <div class="resizer" id="resizer" title="拖动调整宽度，双击复位"></div>
   <main class="main">
     <div class="chat-head">
       <div class="av" id="headAv" style="width:30px;height:30px;flex:0 0 30px;font-size:12px;border-radius:7px"></div>
@@ -151,7 +156,8 @@
 <div class="toast" id="toast"></div>
 
 <script>
-const OPC = /*__OPC_DATA__*/;
+let OPC = /*__OPC_DATA__*/;
+const LIVE = location.protocol === "http:" || location.protocol === "https:";
 const COLOR = {
   teal:{bg:"#9FE1CB",fg:"#04342C"}, blue:{bg:"#B5D4F4",fg:"#042C53"},
   pink:{bg:"#F4C0D1",fg:"#4B1528"}, purple:{bg:"#CECBF6",fg:"#26215C"},
@@ -163,9 +169,41 @@ const TIERS = [
   {id:"default", label:"default · 主力档", desc:"均衡，用于写文档、写代码"},
   {id:"lite", label:"lite · 快而省", desc:"用于执行清单类工作"}
 ];
-const emp = {}; OPC.company.employees.forEach(e => emp[e.id] = e);
-const pendSet = new Set(OPC.pending || []);
+let emp = {};
+let pendSet = new Set();
 let current = "group";
+function reindex(){
+  emp = {};
+  OPC.company.employees.forEach(e => emp[e.id] = e);
+  pendSet = new Set(OPC.pending || []);
+}
+reindex();
+
+async function api(path, body){
+  const r = await fetch(path, {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify(body || {})
+  });
+  const d = await r.json();
+  if (!d.ok) throw new Error(d.error || "写入失败");
+  if (d.state){ OPC = d.state; reindex(); }
+  return d;
+}
+function rerender(){
+  renderSide();
+  if (current === "office") renderOffice(); else renderChat();
+}
+async function refresh(){
+  if (!LIVE) return;
+  try {
+    const r = await fetch("/api/state", {cache: "no-store"});
+    const d = await r.json();
+    if (d.messages.length !== OPC.messages.length || (d.pending||[]).length !== (OPC.pending||[]).length){
+      OPC = d; reindex(); rerender();
+    }
+  } catch(e){}
+}
 
 function esc(s){ return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
 function av(e, cls){
@@ -273,17 +311,31 @@ function renderOffice(){
       </div>
     </div>`;
   }).join("") + `<div class="empty" style="padding:22px 0 6px">归档不是删除 · 原文仍在对应员工的私聊记录里，只是不再计入待办</div>`;
-  inner.querySelectorAll("[data-ack]").forEach(b => b.onclick = () => {
+  inner.querySelectorAll("[data-ack]").forEach(b => b.onclick = async () => {
     const id = b.dataset.ack;
+    if (LIVE){
+      b.disabled = true;
+      try { await api("/api/ack", {ids:[id]}); toast("已归档 " + id); rerender(); }
+      catch(e){ toast("归档失败：" + e.message); b.disabled = false; }
+      return;
+    }
     const m = OPC.messages.find(x => x.id === id) || {};
     const e = emp[m.from] || {name:"员工"};
     const txt = `归档 ${id}（${e.name}的${OPC.kinds[m.kind]||m.kind}）`;
     copy(txt); toast("已复制：" + txt);
   });
-  inner.querySelectorAll("[data-copy]").forEach(b => b.onclick = () => {
+  inner.querySelectorAll("[data-copy]").forEach(b => b.onclick = async () => {
     const [id, choice] = b.dataset.copy.split("|");
     const m = OPC.messages.find(x=>x.id===id) || {};
     const empId = (m.channel||"").replace("dm:","");
+    if (LIVE && choice){
+      b.disabled = true;
+      try {
+        await api("/api/msg", {channel: m.channel, kind: "DECISION", text: choice});
+        toast("已裁决：" + empId + " 选 " + choice); rerender();
+      } catch(e){ toast("写入失败：" + e.message); b.disabled = false; }
+      return;
+    }
     const txt = choice ? `${empId} 裁决：选 ${choice}` : `我回复 ${empId}：`;
     copy(txt); toast("已复制：" + txt);
   });
@@ -343,10 +395,26 @@ function renderPop(){
 }
 
 /* ---------- 输入 ---------- */
-document.getElementById("send").onclick = () => {
+document.getElementById("send").onclick = async () => {
   const ta = document.getElementById("input");
   const v = ta.value.trim(); if (!v) return;
   const target = current === "group" ? "群聊" : (emp[current.slice(3)]||{}).name;
+
+  if (LIVE){
+    const kind = current === "group" ? "BOSS" : "DECISION";
+    const btn = document.getElementById("send");
+    btn.disabled = true;
+    try {
+      await api("/api/msg", {channel: current, kind, text: v});
+      ta.value = ""; ta.style.height = "auto";
+      rerender();
+      toast(current === "group" ? "已发到群里 · 员工下次读状态就能看到" : "已作为裁决记给 " + target);
+    } catch(e){
+      toast("写入失败：" + e.message);
+    } finally { btn.disabled = false; }
+    return;
+  }
+
   copy(v);
   const inner = document.getElementById("streamInner");
   const div = document.createElement("div");
@@ -365,6 +433,46 @@ ta.addEventListener("keydown", e => { if (e.key==="Enter" && !e.shiftKey && !e.i
 document.getElementById("tierPill").onclick = e => { e.stopPropagation(); renderPop(); document.getElementById("tierPop").classList.toggle("show"); };
 document.addEventListener("click", () => document.getElementById("tierPop").classList.remove("show"));
 
+/* ---------- 侧边栏宽度 ---------- */
+(function(){
+  const side = document.querySelector(".side");
+  const rz = document.getElementById("resizer");
+  const KEY = "opc.sideW";
+  const clamp = w => Math.min(460, Math.max(180, w));
+  const apply = w => { side.style.flex = "0 0 " + w + "px"; side.style.width = w + "px"; };
+  const saved = parseInt(localStorage.getItem(KEY) || "0", 10);
+  if (saved) apply(clamp(saved));
+
+  let dragging = false;
+  rz.addEventListener("mousedown", e => {
+    dragging = true; rz.classList.add("on");
+    document.body.style.cursor = "col-resize";
+    document.body.style.userSelect = "none";
+    e.preventDefault();
+  });
+  window.addEventListener("mousemove", e => { if (dragging) apply(clamp(e.clientX)); });
+  window.addEventListener("mouseup", () => {
+    if (!dragging) return;
+    dragging = false; rz.classList.remove("on");
+    document.body.style.cursor = ""; document.body.style.userSelect = "";
+    localStorage.setItem(KEY, parseInt(side.style.width, 10));
+  });
+  rz.addEventListener("dblclick", () => { apply(292); localStorage.setItem(KEY, "292"); });
+})();
+
+/* ---------- 模式提示 ---------- */
+(function(){
+  const hint = document.querySelector(".hint");
+  if (LIVE){
+    hint.innerHTML = "实时模式 · 消息直接写进 .opc/messages.json，归档即时生效 · 员工下次读状态就能接单";
+    document.getElementById("input").placeholder = "在群里提需求，或私聊某个员工做裁决…";
+  } else {
+    hint.innerHTML = "只读模式（file:// 直开）· 发送会复制到剪贴板，粘回对话才能让员工接单。想要真写入：opc serve --open";
+  }
+  document.title = OPC.company.name + (LIVE ? " · 实时" : " · 只读");
+})();
+
+if (LIVE) setInterval(refresh, 3000);
 select("group");
 </script>
 </body>
