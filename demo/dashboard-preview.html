@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>One-person company · 工作台</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    font-size: 13px; color: #1f1f1d; background: #f2f2ef;
+    -webkit-font-smoothing: antialiased;
+  }
+  .app { display: flex; height: 100vh; overflow: hidden; }
+
+  /* ---------- 侧栏 ---------- */
+  .side { width: 292px; flex: 0 0 292px; background: #f7f7f4; border-right: 1px solid #e6e6e1; display: flex; flex-direction: column; }
+  .side-head { padding: 16px 16px 12px; border-bottom: 1px solid #ebebe6; }
+  .brand { font-size: 15px; font-weight: 600; letter-spacing: -0.2px; }
+  .phase { margin-top: 6px; display: inline-block; font-size: 11px; color: #5f5e5a; background: #edece6; border-radius: 5px; padding: 3px 7px; }
+  .side-list { flex: 1; overflow-y: auto; padding: 6px 8px 14px; }
+  .row { display: flex; align-items: center; gap: 10px; padding: 9px 8px; border-radius: 8px; cursor: pointer; position: relative; }
+  .row:hover { background: #efefe9; }
+  .row.active { background: #e8e8e1; }
+  .av { width: 34px; height: 34px; flex: 0 0 34px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 600; }
+  .row-main { min-width: 0; flex: 1; }
+  .row-name { font-size: 13px; font-weight: 500; display: flex; align-items: center; gap: 6px; }
+  .row-sub { font-size: 11px; color: #86867e; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .badge { font-size: 10px; background: #d85a30; color: #fff; border-radius: 9px; padding: 1px 6px; font-weight: 500; }
+  .tier-dot { width: 5px; height: 5px; border-radius: 50%; background: #b4b2a9; }
+  .sep { margin: 8px 8px; height: 1px; background: #e6e6e1; }
+  .side-foot { padding: 10px 16px; border-top: 1px solid #ebebe6; font-size: 11px; color: #9a9a92; line-height: 1.6; }
+
+  /* ---------- 主区 ---------- */
+  .main { flex: 1; display: flex; flex-direction: column; background: #fff; min-width: 0; }
+  .chat-head { height: 54px; flex: 0 0 54px; display: flex; align-items: center; gap: 10px; padding: 0 18px; border-bottom: 1px solid #ebebe6; }
+  .chat-title { font-size: 14px; font-weight: 600; }
+  .chat-meta { font-size: 11px; color: #8b8b83; }
+  .pill { display: inline-flex; align-items: center; gap: 6px; background: #f1f1ee; border: 1px solid #e4e4de; border-radius: 999px; padding: 5px 11px; font-size: 12px; color: #3d3d39; cursor: pointer; user-select: none; }
+  .pill:hover { background: #eaeae5; }
+  .pill .caret { font-size: 9px; color: #86867e; }
+  .pill-wrap { position: relative; margin-left: auto; }
+  .pop { position: absolute; right: 0; top: 34px; width: 250px; background: #fff; border: 1px solid #e2e2dc; border-radius: 10px; box-shadow: 0 6px 24px rgba(0,0,0,.09); padding: 6px; display: none; z-index: 30; }
+  .pop.show { display: block; }
+  .pop-t { font-size: 11px; color: #8b8b83; padding: 6px 8px 4px; }
+  .pop-i { padding: 7px 8px; border-radius: 7px; cursor: pointer; font-size: 12px; display: flex; align-items: center; gap: 8px; }
+  .pop-i:hover { background: #f4f4f0; }
+  .pop-i.cur { background: #f1f1ee; font-weight: 500; }
+  .pop-hint { font-size: 11px; color: #a0a098; padding: 6px 8px 4px; border-top: 1px solid #f0f0eb; margin-top: 4px; line-height: 1.5; }
+
+  .stream { flex: 1; overflow-y: auto; padding: 18px 22px 26px; }
+  .stream-inner { max-width: 720px; margin: 0 auto; }
+  .daystamp { text-align: center; margin: 6px 0 16px; }
+  .daystamp span { font-size: 11px; color: #a3a39b; background: #f5f5f1; padding: 3px 9px; border-radius: 5px; }
+
+  .msg { display: flex; gap: 10px; margin-bottom: 16px; align-items: flex-start; }
+  .msg.me { flex-direction: row-reverse; }
+  .msg .av { width: 30px; height: 30px; flex: 0 0 30px; border-radius: 7px; font-size: 12px; }
+  .bubble-wrap { max-width: 78%; min-width: 0; }
+  .who { font-size: 11px; color: #8b8b83; margin-bottom: 4px; display: flex; align-items: center; gap: 6px; }
+  .msg.me .who { justify-content: flex-end; }
+  .bubble { background: #f4f4f0; border-radius: 10px; padding: 9px 12px; line-height: 1.62; word-break: break-word; white-space: pre-wrap; }
+  .msg.me .bubble { background: #1f1f1d; color: #f7f7f4; }
+  .tag { font-size: 10px; padding: 1px 6px; border-radius: 4px; font-weight: 500; white-space: nowrap; }
+  .t-TASK { background: #e1f5ee; color: #0f6e56; }
+  .t-PROGRESS { background: #e6f1fb; color: #185fa5; }
+  .t-DELIVER { background: #eaf3de; color: #3b6d11; }
+  .t-CHALLENGE { background: #faeeda; color: #854f0b; }
+  .t-RISK { background: #fcebeb; color: #a32d2d; }
+  .t-DECIDE { background: #eeedfe; color: #534ab7; }
+  .t-DECISION { background: #221f1a; color: #fff; }
+
+  .card { border-left: 3px solid #d8d8d1; padding-left: 10px; }
+  .card.k-TASK { border-left-color: #1d9e75; }
+  .card.k-PROGRESS { border-left-color: #378add; }
+  .card.k-DELIVER { border-left-color: #639922; }
+  .card.k-CHALLENGE { border-left-color: #ef9f27; }
+  .card.k-RISK { border-left-color: #e24b4a; }
+  .card.k-DECIDE { border-left-color: #7f77dd; }
+  .bar { height: 3px; background: #e6e6e1; border-radius: 2px; margin-top: 8px; overflow: hidden; }
+  .bar > i { display: block; height: 100%; background: #378add; border-radius: 2px; }
+  .tid { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px; color: #8b8b83; }
+
+  /* ---------- 输入 ---------- */
+  .composer { flex: 0 0 auto; border-top: 1px solid #ebebe6; padding: 12px 22px 14px; }
+  .composer-inner { max-width: 720px; margin: 0 auto; }
+  .box { display: flex; align-items: flex-end; gap: 10px; background: #f7f7f4; border: 1px solid #e6e6e1; border-radius: 14px; padding: 9px 10px; }
+  .box:focus-within { border-color: #cfcfc7; background: #fff; }
+  .box textarea { flex: 1; border: 0; outline: 0; background: transparent; resize: none; font: inherit; font-size: 13px; line-height: 1.6; max-height: 120px; padding: 4px 2px; color: #1f1f1d; }
+  .send { width: 32px; height: 32px; flex: 0 0 32px; border-radius: 50%; background: #1f1f1d; border: 0; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+  .send:hover { background: #000; }
+  .send svg { width: 15px; height: 15px; }
+  .hint { font-size: 11px; color: #a3a39b; margin-top: 7px; }
+
+  /* ---------- 办公室 ---------- */
+  .office { padding: 18px 22px; overflow-y: auto; flex: 1; }
+  .office-inner { max-width: 720px; margin: 0 auto; }
+  .pend { border: 1px solid #e6e6e1; border-radius: 12px; padding: 13px 14px; margin-bottom: 10px; }
+  .pend-h { display: flex; align-items: center; gap: 8px; margin-bottom: 7px; }
+  .pend-from { font-size: 12px; font-weight: 500; }
+  .pend-body { font-size: 12.5px; line-height: 1.65; color: #3d3d39; white-space: pre-wrap; }
+  .pend-act { margin-top: 10px; display: flex; gap: 8px; }
+  .btn { font-size: 11px; border: 1px solid #e2e2dc; background: #fff; border-radius: 6px; padding: 4px 10px; cursor: pointer; color: #3d3d39; }
+  .btn:hover { background: #f7f7f4; }
+  .empty { text-align: center; color: #a3a39b; font-size: 12px; padding: 60px 0; line-height: 1.8; }
+  .toast { position: fixed; left: 50%; bottom: 32px; transform: translateX(-50%); background: #1f1f1d; color: #fff; font-size: 12px; padding: 8px 16px; border-radius: 8px; opacity: 0; pointer-events: none; transition: opacity .18s; z-index: 99; }
+  .toast.show { opacity: .95; }
+  ::-webkit-scrollbar { width: 8px; height: 8px; }
+  ::-webkit-scrollbar-thumb { background: #dcdcd5; border-radius: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="side">
+    <div class="side-head">
+      <div class="brand" id="brand">One-person company</div>
+      <div class="phase" id="phase">—</div>
+    </div>
+    <div class="side-list" id="sideList"></div>
+    <div class="side-foot" id="sideFoot"></div>
+  </aside>
+  <main class="main">
+    <div class="chat-head">
+      <div class="av" id="headAv" style="width:30px;height:30px;flex:0 0 30px;font-size:12px;border-radius:7px"></div>
+      <div>
+        <div class="chat-title" id="headTitle">群聊</div>
+        <div class="chat-meta" id="headMeta">—</div>
+      </div>
+      <div class="pill-wrap">
+        <div class="pill" id="tierPill"><span id="tierLabel">default</span><span class="caret">▾</span></div>
+        <div class="pop" id="tierPop"></div>
+      </div>
+    </div>
+    <div class="stream" id="stream"><div class="stream-inner" id="streamInner"></div></div>
+    <div class="office" id="office" style="display:none"><div class="office-inner" id="officeInner"></div></div>
+    <div class="composer" id="composer">
+      <div class="composer-inner">
+        <div class="box">
+          <textarea id="input" rows="1" placeholder="在群里派活，或私聊某个员工…"></textarea>
+          <button class="send" id="send" title="发送">
+            <svg viewBox="0 0 24 24" fill="none"><path d="M4 11.5L20 4L12.8 20L11.2 13.2L4 11.5Z" stroke="#fff" stroke-width="1.8" stroke-linejoin="round"/></svg>
+          </button>
+        </div>
+        <div class="hint">群聊只走派活与进度 · 异议和风险走私聊 · 发送后会复制到剪贴板，粘回对话即可让员工接单</div>
+      </div>
+    </div>
+  </main>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+const OPC = {"company": {"name": "记账小程序", "created": "2026-11-01 16:00", "phase": "第 6 步 · 原型图设计", "boss": "老板", "employees": [{"id": "pm", "name": "项目经理", "role": "Project Manager", "tier": "reasoning", "avatar": "项", "color": "teal"}, {"id": "pd", "name": "产品经理", "role": "Product Manager", "tier": "default", "avatar": "产", "color": "blue"}, {"id": "ui", "name": "UI设计", "role": "UI Designer", "tier": "default", "avatar": "U", "color": "pink"}, {"id": "arch", "name": "架构师", "role": "Architect", "tier": "reasoning", "avatar": "架", "color": "purple"}, {"id": "dev", "name": "程序员", "role": "Engineer", "tier": "default", "avatar": "码", "color": "green"}, {"id": "qa", "name": "测试", "role": "QA", "tier": "lite", "avatar": "测", "color": "amber"}, {"id": "ops", "name": "运维", "role": "Ops", "tier": "lite", "avatar": "运", "color": "coral"}]}, "tasks": [{"id": "T-001", "title": "项目立项", "owner": "pm", "phase": "项目启动", "status": "done", "progress": 100, "artifacts": [], "gate": null, "created": "2026-11-01 16:00", "updated": "2026-11-01 16:00"}, {"id": "T-002", "title": "粗需求梳理", "owner": "pd", "phase": "需求分析", "status": "done", "progress": 100, "artifacts": [], "gate": null, "created": "2026-11-01 16:00", "updated": "2026-11-01 16:00"}, {"id": "T-003", "title": "原型设计", "owner": "ui", "phase": "原型", "status": "doing", "progress": 40, "artifacts": [], "gate": null, "created": "2026-11-01 16:00", "updated": "2026-11-01 16:00"}], "messages": [{"id": "M001", "ts": "2026-11-01 16:00", "channel": "group", "from": "pm", "kind": "TASK", "task": "T-001", "text": "#T-001 立项：产出 01-立项书.md，含目标、范围边界、验收标准"}, {"id": "M002", "ts": "2026-11-01 16:00", "channel": "group", "from": "pm", "kind": "DELIVER", "task": "T-001", "text": "#T-001 交付 01-立项书.md｜范围 3 项：记账、分类统计、月度报表。明确不做：多账本、多人协作"}, {"id": "M003", "ts": "2026-11-01 16:00", "channel": "group", "from": "pm", "kind": "TASK", "task": "T-002", "text": "#T-002 派给 @产品经理：拆用户故事，验收=每条能对应一个可点的页面"}, {"id": "M004", "ts": "2026-11-01 16:00", "channel": "group", "from": "pd", "kind": "DELIVER", "task": "T-002", "text": "#T-002 交付 02-PRD-粗.md｜7 个用户故事，2 个挪到下一期，逐条对照老板原话"}, {"id": "M005", "ts": "2026-11-01 16:00", "channel": "dm:pd", "from": "pd", "kind": "CHALLENGE", "task": "", "text": "老板原话提到「给家里人一起记」，可能要多人协作。\n选项 A：单用户先做（快，首版 5 天）\n选项 B：直接做多用户（多 5 天，要账号体系）\n我建议 A，首版先验证记账本身是否好用，账号可以后加。"}, {"id": "M006", "ts": "2026-11-01 16:00", "channel": "dm:pd", "from": "boss", "kind": "DECISION", "task": "", "text": "A"}, {"id": "M007", "ts": "2026-11-01 16:00", "channel": "group", "from": "pd", "kind": "PROGRESS", "task": "T-002", "text": "#T-002 已裁决：单用户。继续"}, {"id": "M008", "ts": "2026-11-01 16:00", "channel": "group", "from": "pm", "kind": "TASK", "task": "T-003", "text": "#T-003 派给 @UI设计：3 个主页面 + 空态与错误态，验收=能点通记账全流程"}, {"id": "M009", "ts": "2026-11-01 16:00", "channel": "group", "from": "ui", "kind": "PROGRESS", "task": "T-003", "text": "#T-003 进度 40%，首页与记账页布局完成，在补分类选择器"}], "kinds": {"TASK": "派活", "PROGRESS": "进度", "DELIVER": "交付", "CHALLENGE": "方案分歧", "RISK": "风险预警", "DECIDE": "请求裁决", "DECISION": "老板裁决"}, "pending": [], "generated": "2026-11-01 16:00"};
+const COLOR = {
+  teal:{bg:"#9FE1CB",fg:"#04342C"}, blue:{bg:"#B5D4F4",fg:"#042C53"},
+  pink:{bg:"#F4C0D1",fg:"#4B1528"}, purple:{bg:"#CECBF6",fg:"#26215C"},
+  green:{bg:"#C0DD97",fg:"#173404"}, amber:{bg:"#FAC775",fg:"#412402"},
+  coral:{bg:"#F5C4B3",fg:"#4A1B0C"}
+};
+const TIERS = [
+  {id:"reasoning", label:"reasoning · 强推理", desc:"慢而准，用于拆任务、定架构"},
+  {id:"default", label:"default · 主力档", desc:"均衡，用于写文档、写代码"},
+  {id:"lite", label:"lite · 快而省", desc:"用于执行清单类工作"}
+];
+const emp = {}; OPC.company.employees.forEach(e => emp[e.id] = e);
+const pendSet = new Set(OPC.pending || []);
+let current = "group";
+
+function esc(s){ return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+function av(e, cls){
+  const c = COLOR[e.color] || COLOR.teal;
+  return `<div class="av ${cls||""}" style="background:${c.bg};color:${c.fg}">${esc(e.avatar)}</div>`;
+}
+function toast(t){ const el=document.getElementById("toast"); el.textContent=t; el.classList.add("show"); clearTimeout(el._t); el._t=setTimeout(()=>el.classList.remove("show"),1900); }
+function copy(t){ navigator.clipboard.writeText(t).catch(()=>{}); }
+
+/* ---------- 侧栏 ---------- */
+function lastOf(ch){
+  const list = OPC.messages.filter(m => m.channel === ch);
+  return list.length ? list[list.length-1] : null;
+}
+function renderSide(){
+  const pendingCount = (OPC.pending||[]).length;
+  let h = "";
+  const g = lastOf("group");
+  h += `<div class="row ${current==="group"?"active":""}" data-ch="group">
+    <div class="av" style="background:#1f1f1d;color:#fff">群</div>
+    <div class="row-main"><div class="row-name">全体群聊</div>
+      <div class="row-sub">${g?esc(g.text.slice(0,26)):"还没有动静"}</div></div>
+  </div>`;
+  h += `<div class="row ${current==="office"?"active":""}" data-ch="office">
+    <div class="av" style="background:#221f1a;color:#fff">董</div>
+    <div class="row-main"><div class="row-name">董事长办公室 ${pendingCount?`<span class="badge">${pendingCount}</span>`:""}</div>
+      <div class="row-sub">${pendingCount?`${pendingCount} 件事等你拍板`:"没有待裁决"}</div></div>
+  </div>`;
+  h += `<div class="sep"></div>`;
+  OPC.company.employees.forEach(e => {
+    const ch = "dm:"+e.id;
+    const l = lastOf(ch);
+    const n = OPC.messages.filter(m => m.channel===ch && m.kind!=="DECISION" && pendSet.has(m.id)).length;
+    h += `<div class="row ${current===ch?"active":""}" data-ch="${ch}">
+      ${av(e)}
+      <div class="row-main"><div class="row-name">${esc(e.name)}
+        <span class="tier-dot" title="${e.tier}"></span>${n?`<span class="badge">${n}</span>`:""}</div>
+        <div class="row-sub">${l?esc(l.text.slice(0,24)):esc(e.role)}</div></div>
+    </div>`;
+  });
+  document.getElementById("sideList").innerHTML = h;
+  document.querySelectorAll(".row").forEach(r => r.onclick = () => select(r.dataset.ch));
+  document.getElementById("brand").textContent = OPC.company.name;
+  document.getElementById("phase").textContent = OPC.company.phase;
+  const done = OPC.tasks.filter(t=>t.status==="done").length;
+  document.getElementById("sideFoot").innerHTML =
+    `任务 ${OPC.tasks.length} 个 · 完成 ${done} 个<br>群聊 ${OPC.messages.filter(m=>m.channel==="group").length} 条 · 生成于 ${esc(OPC.generated)}`;
+}
+
+/* ---------- 消息流 ---------- */
+function progressOf(t){ const m = /(\d{1,3})\s*%/.exec(t); return m ? Math.min(100, +m[1]) : null; }
+function msgHTML(m){
+  const mine = m.from === "boss";
+  const e = emp[m.from] || {name:"老板", avatar:"我", color:"gray"};
+  const c = COLOR[e.color] || {bg:"#1f1f1d", fg:"#fff"};
+  const kindLabel = OPC.kinds[m.kind] || m.kind;
+  let inner = esc(m.text);
+  if (m.kind === "PROGRESS") {
+    const p = progressOf(m.text);
+    if (p !== null) inner += `<div class="bar"><i style="width:${p}%"></i></div>`;
+  }
+  const tid = m.task ? ` <span class="tid">${esc(m.task)}</span>` : "";
+  return `<div class="msg ${mine?"me":""}">
+    <div class="av" style="background:${mine?"#1f1f1d":c.bg};color:${mine?"#fff":c.fg}">${esc(e.avatar||"·")}</div>
+    <div class="bubble-wrap">
+      <div class="who">${esc(e.name)} <span class="tag t-${m.kind}">${esc(kindLabel)}</span>${tid}<span class="tid">${esc(m.ts)}</span></div>
+      <div class="bubble card k-${m.kind}">${inner}</div>
+    </div>
+  </div>`;
+}
+function renderChat(){
+  const inner = document.getElementById("streamInner");
+  const list = current === "group"
+    ? OPC.messages.filter(m => m.channel === "group")
+    : OPC.messages.filter(m => m.channel === current);
+  if (!list.length){
+    inner.innerHTML = `<div class="empty">${current==="group"
+      ? "群里还很安静。<br>在下面输入一句话提需求，项目经理会来接单。"
+      : "还没有私聊记录。<br>员工遇到分歧或风险时，会单独找你。"}</div>`;
+    return;
+  }
+  inner.innerHTML = `<div class="daystamp"><span>${esc(OPC.company.phase)}</span></div>` + list.map(msgHTML).join("");
+  const s = document.getElementById("stream"); s.scrollTop = s.scrollHeight;
+}
+
+/* ---------- 董事长办公室 ---------- */
+function renderOffice(){
+  const inner = document.getElementById("officeInner");
+  const pend = (OPC.pending||[]).map(id => OPC.messages.find(m=>m.id===id)).filter(Boolean);
+  if (!pend.length){
+    inner.innerHTML = `<div class="empty">没有待裁决的事。<br>群聊里只有派活和进度，需要你拍板的都收在这里。</div>`;
+    return;
+  }
+  inner.innerHTML = pend.map(m => {
+    const e = emp[m.from] || {name:"员工"};
+    return `<div class="pend">
+      <div class="pend-h"><span class="pend-from">${esc(e.name)}</span>
+        <span class="tag t-${m.kind}">${esc(OPC.kinds[m.kind]||m.kind)}</span>
+        <span class="tid">${esc(m.ts)}</span></div>
+      <div class="pend-body">${esc(m.text)}</div>
+      <div class="pend-act">
+        <button class="btn" data-copy="${esc(m.id)}|A">回复 A</button>
+        <button class="btn" data-copy="${esc(m.id)}|B">回复 B</button>
+        <button class="btn" data-copy="${esc(m.id)}|">复制指令</button>
+      </div>
+    </div>`;
+  }).join("");
+  inner.querySelectorAll(".btn").forEach(b => b.onclick = () => {
+    const [id, choice] = b.dataset.copy.split("|");
+    const m = OPC.messages.find(x=>x.id===id);
+    const empId = (m.channel||"").replace("dm:","");
+    const txt = choice ? `${empId} 裁决：选 ${choice}` : `我回复 ${empId}：`;
+    copy(txt); toast("已复制：" + txt);
+  });
+}
+
+/* ---------- 切换 ---------- */
+function select(ch){
+  current = ch;
+  const isOffice = ch === "office";
+  document.getElementById("stream").style.display = isOffice ? "none" : "flex";
+  document.getElementById("office").style.display = isOffice ? "block" : "none";
+  document.getElementById("composer").style.display = isOffice ? "none" : "block";
+
+  let title = "全体群聊", meta = "派活 · 进度 · 交付", who = {avatar:"群", color:"gray"};
+  if (ch === "office"){ title = "董事长办公室"; meta = "只有你能看到"; who = {avatar:"董", color:"gray"}; }
+  else if (ch.startsWith("dm:")){
+    const e = emp[ch.slice(3)];
+    title = e.name; meta = e.role + " · " + e.tier; who = e;
+  }
+  const c = COLOR[who.color] || {bg:"#1f1f1d", fg:"#fff"};
+  const ha = document.getElementById("headAv");
+  ha.style.background = ch==="group"||ch==="office" ? "#1f1f1d" : c.bg;
+  ha.style.color = ch==="group"||ch==="office" ? "#fff" : c.fg;
+  ha.textContent = ch==="group" ? "群" : ch==="office" ? "董" : who.avatar;
+  document.getElementById("headTitle").textContent = title;
+  document.getElementById("headMeta").textContent = meta;
+
+  const tier = ch.startsWith("dm:") ? emp[ch.slice(3)].tier : "default";
+  document.getElementById("tierLabel").textContent = tier;
+  const pill = document.getElementById("tierPill");
+  pill.style.display = ch === "office" ? "none" : "inline-flex";
+  pill.dataset.tier = tier;
+
+  renderSide();
+  if (isOffice) renderOffice(); else renderChat();
+}
+
+/* ---------- 模型档位 ---------- */
+function renderPop(){
+  const cur = document.getElementById("tierPill").dataset.tier;
+  const id = current.startsWith("dm:") ? current.slice(3) : "";
+  let h = `<div class="pop-t">模型档位（当前会话路由）</div>`;
+  TIERS.forEach(t => {
+    h += `<div class="pop-i ${t.id===cur?"cur":""}" data-tier="${t.id}">
+      <strong style="font-weight:500">${t.label}</strong>
+      <span style="color:#a0a098;font-size:11px;margin-left:auto">${t.id===cur?"当前":""}</span></div>`;
+  });
+  h += `<div class="pop-hint">档位不是具体型号：实际调用由宿主按当前套餐路由。改档位请在对话中说明，例如「把架构师换成 reasoning」。</div>`;
+  const pop = document.getElementById("tierPop");
+  pop.innerHTML = h;
+  pop.querySelectorAll(".pop-i").forEach(el => el.onclick = () => {
+    const t = el.dataset.tier;
+    copy(`${emp[id]?emp[id].name:id} 的模型档位改为 ${t}`);
+    toast("已复制切换指令");
+    pop.classList.remove("show");
+  });
+}
+
+/* ---------- 输入 ---------- */
+document.getElementById("send").onclick = () => {
+  const ta = document.getElementById("input");
+  const v = ta.value.trim(); if (!v) return;
+  const target = current === "group" ? "群聊" : (emp[current.slice(3)]||{}).name;
+  copy(v);
+  const inner = document.getElementById("streamInner");
+  const div = document.createElement("div");
+  div.className = "msg me";
+  div.innerHTML = `<div class="av" style="background:#1f1f1d;color:#fff">我</div>
+    <div class="bubble-wrap"><div class="who">老板 <span class="tag t-DECISION">待同步</span><span class="tid">${target}</span></div>
+    <div class="bubble">${esc(v)}</div></div>`;
+  inner.appendChild(div);
+  const s = document.getElementById("stream"); s.scrollTop = s.scrollHeight;
+  ta.value = ""; ta.style.height = "auto";
+  toast("已复制 · 粘回对话即可让 " + target + " 接单");
+};
+const ta = document.getElementById("input");
+ta.addEventListener("input", () => { ta.style.height="auto"; ta.style.height=Math.min(ta.scrollHeight,120)+"px"; });
+ta.addEventListener("keydown", e => { if (e.key==="Enter" && !e.shiftKey && !e.isComposing){ e.preventDefault(); document.getElementById("send").click(); } });
+document.getElementById("tierPill").onclick = e => { e.stopPropagation(); renderPop(); document.getElementById("tierPop").classList.toggle("show"); };
+document.addEventListener("click", () => document.getElementById("tierPop").classList.remove("show"));
+
+select("group");
+</script>
+</body>
+</html>
