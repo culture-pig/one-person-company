@@ -353,6 +353,17 @@ function renderOffice(){
 }
 
 /* ---------- 切换 ---------- */
+function hashChannel(){
+  const h = (location.hash || "").replace(/^#\/?/, "");
+  if (h === "office") return "office";
+  if (h.startsWith("dm:")) return h;
+  return "group";
+}
+function rememberChannel(ch){
+  try {
+    history.replaceState(null, "", ch === "group" ? location.pathname : "#" + ch);
+  } catch(e){}
+}
 function select(ch){
   current = ch;
   const isOffice = ch === "office";
@@ -382,7 +393,12 @@ function select(ch){
 
   renderSide();
   if (isOffice) renderOffice(); else renderChat();
+  rememberChannel(ch);
 }
+window.addEventListener("hashchange", () => {
+  const ch = hashChannel();
+  if (ch !== current) select(ch);
+});
 
 /* ---------- 模型档位 ---------- */
 function renderPop(){
@@ -492,7 +508,7 @@ document.addEventListener("click", () => document.getElementById("tierPop").clas
 })();
 
 if (LIVE) setInterval(refresh, 3000);
-select("group");
+select(hashChannel());
 </script>
 </body>
 </html>
