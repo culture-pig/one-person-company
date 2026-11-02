@@ -15,7 +15,7 @@
   .app { display: flex; height: 100vh; overflow: hidden; }
 
   /* ---------- 侧栏 ---------- */
-  .side { width: 292px; flex: 0 0 292px; background: #f7f7f4; border-right: 1px solid #e6e6e1; display: flex; flex-direction: column; min-width: 180px; }
+  .side { width: 292px; flex: 0 0 auto; max-width: min(460px, 55vw); background: #f7f7f4; border-right: 1px solid #e6e6e1; display: flex; flex-direction: column; min-width: 180px; }
   .resizer { flex: 0 0 6px; cursor: col-resize; background: transparent; transition: background .12s; }
   .resizer:hover, .resizer.on { background: #dedeD6; }
   .side-head { padding: 16px 16px 12px; border-bottom: 1px solid #ebebe6; }
@@ -35,7 +35,7 @@
   .side-foot { padding: 10px 16px; border-top: 1px solid #ebebe6; font-size: 11px; color: #9a9a92; line-height: 1.6; }
 
   /* ---------- 主区 ---------- */
-  .main { flex: 1; display: flex; flex-direction: column; background: #fff; min-width: 0; }
+  .main { flex: 1 1 auto; display: flex; flex-direction: column; background: #fff; min-width: 320px; }
   .chat-head { height: 54px; flex: 0 0 54px; display: flex; align-items: center; gap: 10px; padding: 0 18px; border-bottom: 1px solid #ebebe6; }
   .chat-title { font-size: 14px; font-weight: 600; }
   .chat-meta { font-size: 11px; color: #8b8b83; }
@@ -110,6 +110,8 @@
   .empty { text-align: center; color: #a3a39b; font-size: 12px; padding: 60px 0; line-height: 1.8; }
   .toast { position: fixed; left: 50%; bottom: 32px; transform: translateX(-50%); background: #1f1f1d; color: #fff; font-size: 12px; padding: 8px 16px; border-radius: 8px; opacity: 0; pointer-events: none; transition: opacity .18s; z-index: 99; }
   .toast.show { opacity: .95; }
+  .errbar { display: none; background: #fcebeb; color: #a32d2d; border-bottom: 1px solid #f7c1c1; padding: 8px 16px; font-size: 12px; line-height: 1.55; white-space: pre-wrap; }
+  .errbar.show { display: block; }
   ::-webkit-scrollbar { width: 8px; height: 8px; }
   ::-webkit-scrollbar-thumb { background: #dcdcd5; border-radius: 4px; }
   ::-webkit-scrollbar-track { background: transparent; }
@@ -127,6 +129,7 @@
   </aside>
   <div class="resizer" id="resizer" title="拖动调整宽度，双击复位"></div>
   <main class="main">
+    <div class="errbar" id="errbar"></div>
     <div class="chat-head">
       <div class="av" id="headAv" style="width:30px;height:30px;flex:0 0 30px;font-size:12px;border-radius:7px"></div>
       <div>
@@ -156,6 +159,13 @@
 <div class="toast" id="toast"></div>
 
 <script>
+window.onerror = function(msg, src, line){
+  const el = document.getElementById("errbar");
+  if (el){ el.textContent = "页面脚本出错，显示可能不完整：" + msg + "（第 " + line + " 行）"; el.classList.add("show"); }
+};
+const lsGet = k => { try { return localStorage.getItem(k); } catch(e){ return null; } };
+const lsSet = (k, v) => { try { localStorage.setItem(k, v); } catch(e){} };
+
 let OPC = /*__OPC_DATA__*/;
 const LIVE = location.protocol === "http:" || location.protocol === "https:";
 const COLOR = {
@@ -174,7 +184,8 @@ let pendSet = new Set();
 let current = "group";
 function reindex(){
   emp = {};
-  OPC.company.employees.forEach(e => emp[e.id] = e);
+  const list = (OPC.company && OPC.company.employees) || [];
+  list.forEach(e => emp[e.id] = e);
   pendSet = new Set(OPC.pending || []);
 }
 reindex();
@@ -437,11 +448,14 @@ document.addEventListener("click", () => document.getElementById("tierPop").clas
 (function(){
   const side = document.querySelector(".side");
   const rz = document.getElementById("resizer");
+  if (!side || !rz) return;
   const KEY = "opc.sideW";
-  const clamp = w => Math.min(460, Math.max(180, w));
-  const apply = w => { side.style.flex = "0 0 " + w + "px"; side.style.width = w + "px"; };
-  const saved = parseInt(localStorage.getItem(KEY) || "0", 10);
-  if (saved) apply(clamp(saved));
+  const maxW = () => Math.max(220, Math.min(460, Math.round(window.innerWidth * 0.55)));
+  const clamp = w => Math.min(maxW(), Math.max(180, w || 292));
+  const apply = w => { const v = clamp(w); side.style.flex = "0 0 auto"; side.style.width = v + "px"; return v; };
+
+  const saved = parseInt(lsGet(KEY) || "0", 10);
+  if (saved > 0) apply(saved);
 
   let dragging = false;
   rz.addEventListener("mousedown", e => {
@@ -450,26 +464,31 @@ document.addEventListener("click", () => document.getElementById("tierPop").clas
     document.body.style.userSelect = "none";
     e.preventDefault();
   });
-  window.addEventListener("mousemove", e => { if (dragging) apply(clamp(e.clientX)); });
+  window.addEventListener("mousemove", e => { if (dragging) apply(e.clientX); });
   window.addEventListener("mouseup", () => {
     if (!dragging) return;
     dragging = false; rz.classList.remove("on");
     document.body.style.cursor = ""; document.body.style.userSelect = "";
-    localStorage.setItem(KEY, parseInt(side.style.width, 10));
+    lsSet(KEY, parseInt(side.style.width, 10));
   });
-  rz.addEventListener("dblclick", () => { apply(292); localStorage.setItem(KEY, "292"); });
+  rz.addEventListener("dblclick", () => { lsSet(KEY, apply(292)); });
+  window.addEventListener("resize", () => {
+    if (side.style.width) apply(parseInt(side.style.width, 10));
+  });
 })();
 
 /* ---------- 模式提示 ---------- */
 (function(){
   const hint = document.querySelector(".hint");
+  if (!hint) return;
+  const input = document.getElementById("input");
   if (LIVE){
-    hint.innerHTML = "实时模式 · 消息直接写进 .opc/messages.json，归档即时生效 · 员工下次读状态就能接单";
-    document.getElementById("input").placeholder = "在群里提需求，或私聊某个员工做裁决…";
+    hint.textContent = "实时模式 · 消息直接写进 .opc/messages.json，归档即时生效 · 员工下次读状态就能接单";
+    if (input) input.placeholder = "在群里提需求，或私聊某个员工做裁决…";
   } else {
-    hint.innerHTML = "只读模式（file:// 直开）· 发送会复制到剪贴板，粘回对话才能让员工接单。想要真写入：opc serve --open";
+    hint.textContent = "只读模式（file:// 直开）· 发送会复制到剪贴板，粘回对话才能让员工接单。想要真写入：opc serve --open";
   }
-  document.title = OPC.company.name + (LIVE ? " · 实时" : " · 只读");
+  if (OPC.company) document.title = OPC.company.name + (LIVE ? " · 实时" : " · 只读");
 })();
 
 if (LIVE) setInterval(refresh, 3000);
