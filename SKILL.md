@@ -15,7 +15,7 @@ python "<SKILL_DIR>/scripts/opc.py" --dir "<项目根目录>" build
 ```
 
 `init` 会在项目下建 `.opc/`（company.json / tasks.json / messages.json / docs/ / dashboard.html）。
-`build` 生成工作台，用 `present_files` 打开 `.opc/dashboard.html` 给用户看。
+`build` 只生成静态页。**要给人看，运行 `serve --open`，它会在系统默认浏览器里弹出工作台** —— 不要用 `present_files`、也不要用内置预览面板打开 `.opc/dashboard.html`，那个面板太窄，界面会被挤变形。
 
 > 跨平台：Windows 用 `python`，macOS / Linux 用 `python3`。下面所有命令同理。
 
@@ -75,11 +75,22 @@ $OPC msg --channel group --sender pd --kind PROGRESS --task T-002 --text "#T-002
 $OPC build
 ```
 
-每轮结束都跑一次 `build`，然后 `present_files` 打开 `.opc/dashboard.html`。
+每轮结束都跑一次 `build`。要给老板看就再跑 `serve --open`（后台运行），系统浏览器会弹出工作台。
+
+**打开工作台的正确姿势**（每次都一样）：
+
+```bash
+# 后台起服务并自动弹出系统浏览器，不要用内置预览面板
+$OPC serve --open
+```
+
+- 已经在跑的话，它会探到旧实例、直接复用并打开，不会重复起服务
+- 端口默认 8765，被别的程序占用会自动往后找
+- 这个命令会一直挂着（它就是个服务），所以要用后台方式执行，别在前台等它返回
 
 ## 工作台
 
-`.opc/dashboard.html` 是自包含的，双击就能开。左边像微信：群聊置顶、董事长办公室、七个员工；右边是对话流。**中间那条缝可以拖动**，调宽度，双击复位，宽度记在本地。
+`.opc/dashboard.html` 是自包含的，双击就能开。左边像微信：群聊置顶、董事长办公室、七个员工；右边是对话流。**中间那条缝可以拖动**，调宽度，双击复位，宽度记在本地。用 `serve --open` 打开时是系统浏览器，窗口够宽，布局正常。
 
 - 群聊里 `TASK`/`PROGRESS`/`DELIVER` 渲染成带色条的结构化卡片，`PROGRESS` 自动解析百分比画进度条。
 - 每个员工对话框顶部有模型档位药丸，可看可复制切换指令（不是真切换开关，切换要在对话里说）。

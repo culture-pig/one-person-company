@@ -422,6 +422,20 @@ def cmd_build(args):
 
 # ---------------------------------------------------------------- serve
 
+def probe_existing(root, base_port, span=12):
+    """看看这台机器上是不是已经有一份本公司在跑的服务，有就直接复用。"""
+    import urllib.request
+    for p in range(base_port, base_port + span):
+        try:
+            with urllib.request.urlopen("http://127.0.0.1:%d/api/ping" % p, timeout=0.4) as r:
+                d = json.loads(r.read().decode("utf-8"))
+            if d.get("ok") and d.get("company") == root.name:
+                return "http://127.0.0.1:%d/" % p
+        except Exception:
+            continue
+    return None
+
+
 def cmd_serve(args):
     """本地起一个小服务，让工作台真正可写。
 
@@ -435,6 +449,14 @@ def cmd_serve(args):
     if not company_path(root).exists():
         print("公司还没初始化，先跑 opc init")
         return 1
+
+    if args.open:
+        existing = probe_existing(root, args.port)
+        if existing:
+            print("工作台已经在运行：%s" % existing)
+            print("已在默认浏览器中打开，没有重复起服务。")
+            webbrowser.open(existing)
+            return 0
 
     def append_message(channel, kind, text, sender="boss"):
         data = load(messages_path(root), {"seq": 0, "items": []})
