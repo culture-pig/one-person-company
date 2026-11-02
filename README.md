@@ -1,66 +1,89 @@
-# One-Person Company · 一人公司
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/images/logo-dark.svg">
+    <img src="docs/images/logo.svg" alt="One-Person Company" width="235">
+  </picture>
+</p>
 
-> 把任何一个 AI agent 变成一家公司：你是老板，七个 AI 员工按九步流程把想法做到上线。
+# One-Person Company
 
-不需要 API Key，不需要服务端，不需要部署。装一次，所有 agent 都能用。
+![version](https://img.shields.io/github/v/release/culture-pig/one-person-company) ![license](https://img.shields.io/github/license/culture-pig/one-person-company) ![python](https://img.shields.io/badge/python-3.8%2B-3776AB) ![deps](https://img.shields.io/badge/dependencies-0-brightgreen)
 
-[**看看跑起来什么样 →**](demo/dashboard-preview.html)（下载后直接用浏览器打开）
+One-Person Company 是一个给 AI agent 用的技能。你提需求，七名 AI 员工按九步流程把它做到上线。你只需要两个动作：说清楚要什么，以及在必要时拍板。
 
----
+它不需要 API Key，不需要服务端，不需要安装依赖，模型调用走宿主 agent 自己的额度。
 
-## 它解决什么问题
+![群聊里只有派活、进度和交付三类消息](docs/images/group.png)
 
-一个人做项目，真正卡住的从来不是写代码，是这三件事：
+## 安装
 
-| 痛点 | 一人公司的做法 |
-|---|---|
-| **没流程，想到哪做到哪**，需求没锁就开工，返工三次 | 九步流程 + 四道门禁，不通过不许往下走 |
-| **上下文丢失**，昨天想的方案今天忘了，换个会话从零开始 | 产物链落文件，下游开工前必须先读上游，读不到就停下报错 |
-| **自己是瓶颈**，所有决策都堆在脑子里，没人帮你推进 | 员工只把真正需要你拍板的事拿出来，每条带选项，你回一个字母 |
+技能放在用户级目录，装一次，所有 agent 都能用。
 
-它不是一个"扮演七个角色陪你聊"的提示词。它有一套硬约束：什么话能进群、什么话必须私聊、哪一步没过不许往下走。**约束才是它和普通多角色 prompt 的区别。**
+**命令行**
 
-## 两个通道
+```bash
+# macOS / Linux
+git clone https://github.com/culture-pig/one-person-company.git ~/.workbuddy/skills/one-person-company
 
-这是整个设计最核心的一条，也是最容易被做歪的地方。
+# Windows (PowerShell)
+git clone https://github.com/culture-pig/one-person-company.git "$env:USERPROFILE\.workbuddy\skills\one-person-company"
+```
 
-**群聊 · 公开广播** — 只允许三种员工消息：
-- `派活` 谁接了、要交什么
-- `进度` 做到几成
-- `交付` 产物在哪、一句话结论
+**不用 git**：下载仓库 zip，解压后把整个文件夹放进 `~/.workbuddy/skills/`，确认路径是 `.workbuddy/skills/one-person-company/SKILL.md`。
 
-外加一种你自己的 `老板指令` —— 在群里提需求走这条。
+装完开一个新会话，说「开工」或「让产品经理先拆一版需求」。技能是会话启动时索引的，旧会话里还没生效就新开一个。
 
-**私聊 · 单线** — 只允许三种消息：
-- `方案分歧` 我认为该走 A，但有人要走 B
-- `风险预警` 会延期 / 会返工 / 有阻塞缺陷
-- `请求裁决` 缺业务假设，需要你拍板
+## 快速开始
 
-每条都有两条出路：你回一句 `裁决` 闭环，或者归档掉。**归档不是删除**，原文留在私聊记录里，只是不再占待办角标 —— 否则风险提示会永远挂在你的待办上，久了你就学会无视它，那时候真正要拍板的事也一起被无视了。
+```bash
+OPC="python3 ~/.workbuddy/skills/one-person-company/scripts/opc.py --dir ."
 
-群里禁止出现方案比较、风险分析、请示、寒暄。**一句都不行。**
+$OPC init                                   # 开张，七名员工就位
+$OPC task add --title "项目立项" --owner pm  # 派活
+$OPC serve --open                           # 系统浏览器里打开工作台
+```
 
-为什么必须这么硬：模型天生爱在群里解释和辩论。一旦允许，群聊会退化成一堆自我辩论，你就再也看不到进度了。所以通道是结构约束，不是礼貌建议。
+`serve` 在 `127.0.0.1` 上起一个小服务并打开默认浏览器。重复执行不会起第二个，它会探到已在运行的实例直接复用。不想起服务也行：`$OPC build` 生成 `.opc/dashboard.html`，双击即可看，只是输入框降级为复制到剪贴板。
 
-而私聊必须**给选项 + 一个推荐**，让你能只回一个字母。没有选项的提问一律打回。
+## 功能
 
-## 七名员工
+### 群聊只管进度
 
-| 代号 | 岗位 | 模型档位 | 职责（严格对应九步流程） |
+群里只允许四类消息：`TASK` 派活、`PROGRESS` 进度、`DELIVER` 交付，以及你自己的 `BOSS` 发言。方案比较、风险分析、请示、寒暄，一句都不行。
+
+这条约束是硬的，不是礼貌建议。模型天生爱在群里解释和辩论，一旦放开，群聊会退化成一堆自我辩论，你就再也看不见进度了。
+
+### 私聊只谈取舍
+
+员工遇到分歧、风险或需要你拿主意的事，走单线私聊，并且必须给选项和一个推荐 —— 你只回一个字母。
+
+![董事长办公室把所有待你拍板的事聚在一页](docs/images/office.png)
+
+**董事长办公室**把所有人私聊里没结的事收在一页，每条可以直接回 A、回 B 或归档。
+
+### 归档，而不是永远挂着
+
+待裁决有两种结束方式：你给一个 `DECISION`，或者把这条归档。**归档不是删除**，原文留在私聊记录里，只是不再计入待办。
+
+不加这条的话，`RISK` 类提示会永远挂在角标上。从 2 涨到 5 再涨到 10，你最后学会无视它 —— 那时候真正需要拍板的事也一起被无视了。
+
+### 七名员工
+
+| 代号 | 岗位 | 模型档位 | 负责 |
 |---|---|---|---|
 | `pm` | 项目经理 | reasoning | 立项、锁方案、派活、判门禁 |
 | `pd` | 产品经理 | default | 两轮需求分析（粗 → 细） |
 | `ui` | UI设计师 | default | 可交互原型、视觉规范 |
 | `arch` | 架构师 | reasoning | 业务架构、接口文档、数据库文档 |
 | `dev` | 程序员 | default | 编码实现 |
-| `qa` | 测试 | lite | 测试与上线结论 |
+| `qa` | 测试 | lite | 测试用例与上线结论 |
 | `ops` | 运维 | lite | 部署到生产环境 |
 
-**档位不绑型号**。写死 DeepSeek、Kimi 这种配置三个月就过期；档位跟着宿主路由走，换套餐、换模型都不用改。档位可以重复，不需要每岗都不同。
+档位不绑具体型号。写死某个模型的配置三个月就过期，档位跟着宿主路由走，换套餐、换模型都不用改配置。档位可以重复。
 
-每个岗位都写清了"不做什么"：产品经理不许定技术、架构师不许写业务代码、测试不许因工期放宽结论。**越权一次，这套流程就废了。**
+每个岗位都写清了不做什么：产品经理不许定技术，架构师不许写业务代码，测试不许因工期放宽结论。越权一次，这套流程就废了。
 
-## 九步流程与四道门禁
+### 九步流程与四道门禁
 
 ```
 立项 →G1→ 粗需求 →方案锁定→G2→ 细需求 →原型∥架构→G3→ 编码 →G4→ 部署
@@ -68,98 +91,101 @@
 
 | 门禁 | 通过条件 |
 |---|---|
-| **G1 立项门** | 目标可验收、含 out-of-scope、里程碑有日期 |
-| **G2 方案门** | 原话逐条覆盖、周期资源已确认、降级项留痕 |
-| **G3 设计门** | 每个功能有接口、每张表有主键索引、选型有理由 |
-| **G4 上线门** | 测试结论为可以上线、无阻塞缺陷、回滚方式已写 |
+| G1 立项门 | 目标可验收、含 out-of-scope、里程碑有日期 |
+| G2 方案门 | 原话逐条覆盖、周期资源已确认、降级项留痕 |
+| G3 设计门 | 每个功能有接口、每张表有主键索引、选型有理由 |
+| G4 上线门 | 测试结论为可以上线、无阻塞缺陷、回滚方式已写 |
 
-两轮需求分析中间**必须**夹着方案锁定。合并成一轮是最常见的返工来源 —— 范围没锁就细化，细完发现方向错。
+两轮需求分析中间必须夹着方案锁定。合并成一轮是最常见的返工来源：范围没锁就细化，细完发现方向错了。
 
-## 安装
+### 工作台
 
-克隆到 skills 目录即可，它是用户级的，装一次所有 agent 都能用。
+左边是群聊、董事长办公室和七名员工，右边是对话流，中间那条缝可以拖动调宽。消息按类型渲染成结构化卡片，进度百分比自动画成进度条。
 
-**macOS / Linux**
-```bash
-git clone https://github.com/culture-pig/one-person-company.git ~/.workbuddy/skills/one-person-company
+用 `serve` 打开时是**实时模式**：输入框真的写进状态文件。在群里发话记成老板指令，私聊里发话记成裁决，点归档直接生效。用 `file://` 直接打开时自动降为只读模式，发送改为复制到剪贴板。
+
+![私聊里员工给出选项和建议](docs/images/dm.png)
+
+工作台发不出 `TASK`、`PROGRESS`、`DELIVER` —— 那是员工的话。这条在服务端硬拦，不是界面上把按钮藏起来。
+
+### 产物链
+
+每个阶段落到固定文件名，下游开工前必须先读上游，读不到就停下报错，不许凭记忆开工。
+
+```
+00-需求原话.md   老板原话，不改写
+01-立项书.md     pm
+02-PRD-粗.md     pd（粗）
+03-PRD-细.md     pd（细，方案锁定后）
+04-原型/         ui
+05-架构/         arch
+06-测试报告.md   qa
+07-部署记录.md   ops
+src/             dev
 ```
 
-**Windows (PowerShell)**
-```powershell
-git clone https://github.com/culture-pig/one-person-company.git "$env:USERPROFILE\.workbuddy\skills\one-person-company"
+这些文件就是公司的记忆。换会话、换 agent、换模型，读一遍就能接着干。
+
+## 数据
+
+所有状态都在你项目根目录的 `.opc/` 下：
+
+```
+.opc/
+├── company.json    公司、员工、当前阶段
+├── tasks.json      任务、进度、门禁结果
+├── messages.json   群聊与私聊的全部消息
+├── dashboard.html  生成的工作台
+└── docs/           产物链
 ```
 
-**或者不用 git**：下载仓库 zip，解压后把整个文件夹放到 `~/.workbuddy/skills/` 下，确保路径是 `.workbuddy/skills/one-person-company/SKILL.md`。
+文件即数据库。没有服务端，没有账号，没有云同步。整个 `.opc/` 目录加进 `.gitignore` 就不会污染你的仓库。
 
-装完开一个新会话，说一句「开工」就能用。
-
-## 快速开始
-
-```bash
-OPC="python3 ~/.workbuddy/skills/one-person-company/scripts/opc.py --dir ."
-
-$OPC init                                    # 开张，七名员工就位
-$OPC task add --title "项目立项" --owner pm   # 派活
-$OPC msg --channel group --sender pm --kind TASK --text "#T-001 立项：产出立项书"
-$OPC serve --open                            # 浏览器里打开工作台（可写）
-```
-
-`serve` 会在本机起一个小服务，并**在你的系统默认浏览器里弹出工作台**（不是编辑器里的预览面板）。左边的列表和右边的对话流像微信，**输入框是真的能写**：在群里发话记成「老板指令」，私聊里发话记成「老板裁决」，点「归档」直接生效。
-
-重复执行不会起第二个服务 —— 它会探到已在运行的实例，直接复用并打开。端口默认 8765，被占用会自动往后找。
-
-不想起服务也行，`$OPC build` 生成 `.opc/dashboard.html`，双击就能看，只是输入框降级为"复制到剪贴板"。
-
-## 命令参考
+## 命令
 
 | 命令 | 作用 |
 |---|---|
-| `init` | 初始化公司，建 `.opc/` 目录与七名员工 |
-| `msg` | 追加一条消息，`--channel group` 或 `dm:<代号>` |
-| `task add` / `set` / `list` | 任务派发、进度更新、列表 |
+| `init` | 初始化公司，建 `.opc/` 与七名员工 |
+| `msg` | 追加消息，`--channel group` 或 `dm:<代号>` |
+| `task add` / `set` / `list` | 派活、改进度、看列表 |
 | `gate` | 门禁判定，`--result pass` 或 `reject` |
 | `phase` | 查看或切换当前阶段 |
-| `ack` | 归档待裁决，`--id M020` 或 `--channel dm:qa --all`（原文保留，只是不再计入待办） |
+| `ack` | 归档待裁决，`--id M020` 或 `--channel dm:qa --all` |
 | `status` | 打印公司现状与待裁决清单 |
-| `build` | 从状态生成自包含的 `dashboard.html` |
-| `serve` | 本地起服务，浏览器里直接发话、归档，真写入 |
+| `build` | 生成自包含的 `dashboard.html` |
+| `serve` | 本地起服务，浏览器里可写，`--open` 自动打开 |
 
-消息类型：`TASK` `PROGRESS` `DELIVER` `BOSS`（群聊）｜`CHALLENGE` `RISK` `DECIDE` `DECISION`（私聊）
+消息类型：`TASK` `PROGRESS` `DELIVER` `BOSS`（群聊）｜`CHALLENGE` `RISK` `DECIDE` `DECISION`（私聊）。
 
-## 状态存在哪
+## 做不到的事
 
-```
-你的项目/.opc/
-├── company.json    公司、员工、当前阶段
-├── tasks.json      任务、进度、门禁结果
-├── messages.json   群聊与私聊全部消息
-├── dashboard.html  生成的工作台
-└── docs/           产物链
-    ├── 00-需求原话.md    老板原话，不改写
-    ├── 01-立项书.md
-    ├── 02-PRD-粗.md
-    ├── 03-PRD-细.md
-    ├── 04-原型/
-    ├── 05-架构/
-    ├── 06-测试报告.md
-    └── 07-部署记录.md
-```
+写在这里，是因为它们常被当成功能来问。
 
-**文件即数据库。** 没有服务端，换会话、换 agent、换模型，读这几个文件就能接着干。
+| 想做的 | 实际能做到 | 原因 |
+|---|---|---|
+| 每个员工用不同的大模型 | 只能选档位（强推理 / 主力 / 快） | 零密钥前提下属主路由，拿不到具体型号 |
+| 侧边栏一个独立入口 | 用工作台替代 | 侧边栏是宿主保留位，技能和插件都没有注入权限 |
+| 七个员工同时跑 | 只有原型与架构并行 | 其余阶段严格串行，前一步产物是后一步的输入 |
 
-工作台有两种用法：`build` 生成静态页（双击可看，只读），`serve` 起本地服务（浏览器里可写，每 3 秒自动同步）。两种读的都是同一份 json，不存在数据分叉。
+这三条都写进了项目自己的 ADR（`05-架构/决策记录.md`），不是藏起来。哪天官方开放了，补上就是。
+
+## 更新记录
+
+每次 push 到 `main`，GitHub Actions 会把本次提交按「新功能 / 修复 / 文档 / 其他」归类，发布成一条 Release。所以写提交说明时带上 `feat:` `fix:` `docs:` 前缀。
+
+最新一次看仓库右侧 [Releases](../../releases)，完整历史在 [CHANGELOG.md](CHANGELOG.md)。
 
 ## 目录结构
 
 ```
 one-person-company/
 ├── SKILL.md                      技能主入口：四条铁律、档位表、标准动作
-├── CHANGELOG.md                  人工整理的完整更新历史
+├── CHANGELOG.md                  人工整理的更新历史
 ├── references/
 │   ├── roles.md                  七人职责、不做什么、私聊触发条件
 │   └── protocol.md               双通道硬规则、门禁、产物链
 ├── scripts/
-│   └── opc.py                    状态内核（625 行，纯标准库，无依赖）
+│   └── opc.py                    状态内核，纯标准库，无第三方依赖
 ├── assets/
 │   └── dashboard_template.html   工作台模板
 ├── demo/
@@ -168,42 +194,10 @@ one-person-company/
     └── release-notes.yml         每次 push 自动生成 Release 说明
 ```
 
-## 设计取舍（不假装做到的事）
-
-| 想做的 | 实际能做到 | 原因 |
-|---|---|---|
-| 每个员工选具体大模型 | 只能选档位（强推理/主力/快） | 零密钥前提下属主路由，拿不到型号 |
-| 侧边栏一个独立入口 | 用生成式工作台替代 | 侧边栏是宿主保留位，插件无注入权限 |
-| 实时刷新的协作界面 | 可选本地服务 `serve`，默认仍是静态 `build` | 常驻进程与"装一次到处可用"冲突，所以做成可选，不起也能用 |
-
-这三条都写进了项目自己的 ADR，不是藏起来。**如果哪天官方开放了，补上就是。**
-
-## 常见问题
-
-**Q：需要 API Key 吗？**
-不需要。所有模型调用走宿主 agent 自己的额度。
-
-**Q：能在 Claude Code / Cursor 里用吗？**
-`opc.py` 是纯标准库脚本，任何能跑 Python 的 Agent 环境都能用。`SKILL.md` 是给 agent 读的协议，通用。
-
-**Q：七个员工是同时跑的吗？**
-不是。除原型与架构可并行外，其余严格串行 —— 前一步产物是后一步的输入，并行会丢上下文。
-
-**Q：能改成我自己的岗位吗？**
-改 `references/roles.md` 和 `scripts/opc.py` 里的 `ROSTER` 即可，流程和命令都不用动。
-
-**Q：跑起来一堆文件，会不会很乱？**
-全在 `.opc/` 一个目录里，加进 `.gitignore` 就看不见了。
-
-## 更新记录
-
-每次 push 到 `main`，GitHub Actions 会自动把本次提交按「新功能 / 修复 / 文档 / 其他」归类，发布成一个 Release。
-
-- **最新一次更新** → 仓库右侧 [Releases](../../releases)
-- **完整历史** → [CHANGELOG.md](CHANGELOG.md)
-
-所以写提交说明时带上 `feat:` `fix:` `docs:` 前缀，更新说明才会分类正确。
-
 ## 许可
 
-MIT，随便用、随便改、商用也行。
+[MIT](LICENSE)。随便用、随便改、商用也行。
+
+## 免责声明
+
+这是一个独立项目，与任何宿主 agent 产品的官方无关。AI 员工会读写你的文件、执行命令，也会消耗你的模型额度 —— 重要动作请自己过一眼。

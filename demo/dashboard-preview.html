@@ -166,7 +166,7 @@ window.onerror = function(msg, src, line){
 const lsGet = k => { try { return localStorage.getItem(k); } catch(e){ return null; } };
 const lsSet = (k, v) => { try { localStorage.setItem(k, v); } catch(e){} };
 
-let OPC = {"company": {"name": "记账小程序", "created": "2026-11-02 11:02", "phase": "第 6 步 · 原型图设计", "boss": "老板", "employees": [{"id": "pm", "name": "项目经理", "role": "Project Manager", "tier": "reasoning", "avatar": "项", "color": "teal"}, {"id": "pd", "name": "产品经理", "role": "Product Manager", "tier": "default", "avatar": "产", "color": "blue"}, {"id": "ui", "name": "UI设计", "role": "UI Designer", "tier": "default", "avatar": "U", "color": "pink"}, {"id": "arch", "name": "架构师", "role": "Architect", "tier": "reasoning", "avatar": "架", "color": "purple"}, {"id": "dev", "name": "程序员", "role": "Engineer", "tier": "default", "avatar": "码", "color": "green"}, {"id": "qa", "name": "测试", "role": "QA", "tier": "lite", "avatar": "测", "color": "amber"}, {"id": "ops", "name": "运维", "role": "Ops", "tier": "lite", "avatar": "运", "color": "coral"}]}, "tasks": [{"id": "T-001", "title": "项目立项", "owner": "pm", "phase": "项目启动", "status": "done", "progress": 100, "artifacts": [], "gate": null, "created": "2026-11-02 11:02", "updated": "2026-11-02 11:02"}, {"id": "T-002", "title": "粗需求梳理", "owner": "pd", "phase": "需求分析", "status": "done", "progress": 100, "artifacts": [], "gate": null, "created": "2026-11-02 11:02", "updated": "2026-11-02 11:02"}, {"id": "T-003", "title": "原型设计", "owner": "ui", "phase": "原型", "status": "doing", "progress": 40, "artifacts": [], "gate": null, "created": "2026-11-02 11:02", "updated": "2026-11-02 11:02"}], "messages": [{"id": "M001", "ts": "2026-11-02 11:02", "channel": "group", "from": "pm", "kind": "TASK", "task": "T-001", "text": "#T-001 立项：产出 01-立项书.md，含目标、范围边界、验收标准"}, {"id": "M002", "ts": "2026-11-02 11:02", "channel": "group", "from": "pm", "kind": "DELIVER", "task": "T-001", "text": "#T-001 交付 01-立项书.md｜范围 3 项：记账、分类统计、月度报表。明确不做：多账本、多人协作"}, {"id": "M003", "ts": "2026-11-02 11:02", "channel": "group", "from": "pm", "kind": "TASK", "task": "T-002", "text": "#T-002 派给 @产品经理：拆用户故事，验收=每条能对应一个可点的页面"}, {"id": "M004", "ts": "2026-11-02 11:02", "channel": "group", "from": "pd", "kind": "DELIVER", "task": "T-002", "text": "#T-002 交付 02-PRD-粗.md｜7 个用户故事，2 个挪到下一期"}, {"id": "M005", "ts": "2026-11-02 11:02", "channel": "dm:pd", "from": "pd", "kind": "CHALLENGE", "task": "", "text": "老板原话提到「给家里人一起记」，可能要多人协作。\n选项 A：单用户先做（快，首版 5 天）\n选项 B：直接做多用户（多 5 天，要账号体系）\n我建议 A，首版先验证记账本身是否好用。"}, {"id": "M006", "ts": "2026-11-02 11:02", "channel": "dm:pd", "from": "boss", "kind": "DECISION", "task": "", "text": "A"}, {"id": "M007", "ts": "2026-11-02 11:02", "channel": "group", "from": "boss", "kind": "BOSS", "task": "", "text": "我想加一个按周汇总的视图，不用很复杂"}, {"id": "M008", "ts": "2026-11-02 11:02", "channel": "group", "from": "pm", "kind": "PROGRESS", "task": "T-002", "text": "#T-002 已裁决：单用户。周汇总进下一期，本期先不做"}, {"id": "M009", "ts": "2026-11-02 11:02", "channel": "dm:qa", "from": "qa", "kind": "RISK", "task": "", "text": "【RISK】分类统计在数据少于 10 条时图表会退化成一条线，不阻塞上线，建议加空状态文案。"}, {"id": "M010", "ts": "2026-11-02 11:02", "channel": "group", "from": "pm", "kind": "TASK", "task": "T-003", "text": "#T-003 派给 @UI设计：3 个主页面 + 空态与错误态，验收=能点通记账全流程"}, {"id": "M011", "ts": "2026-11-02 11:02", "channel": "group", "from": "ui", "kind": "PROGRESS", "task": "T-003", "text": "#T-003 进度 40%，首页与记账页布局完成，在补分类选择器"}], "kinds": {"TASK": "派活", "PROGRESS": "进度", "DELIVER": "交付", "BOSS": "老板指令", "CHALLENGE": "方案分歧", "RISK": "风险预警", "DECIDE": "请求裁决", "DECISION": "老板裁决"}, "pending": ["M009"], "generated": "2026-11-02 11:02"};
+let OPC = {"company": {"name": "记账小程序", "created": "2026-11-02 15:23", "phase": "第 6 步 · 原型图设计", "boss": "老板", "employees": [{"id": "pm", "name": "项目经理", "role": "Project Manager", "tier": "reasoning", "avatar": "项", "color": "teal"}, {"id": "pd", "name": "产品经理", "role": "Product Manager", "tier": "default", "avatar": "产", "color": "blue"}, {"id": "ui", "name": "UI设计", "role": "UI Designer", "tier": "default", "avatar": "U", "color": "pink"}, {"id": "arch", "name": "架构师", "role": "Architect", "tier": "reasoning", "avatar": "架", "color": "purple"}, {"id": "dev", "name": "程序员", "role": "Engineer", "tier": "default", "avatar": "码", "color": "green"}, {"id": "qa", "name": "测试", "role": "QA", "tier": "lite", "avatar": "测", "color": "amber"}, {"id": "ops", "name": "运维", "role": "Ops", "tier": "lite", "avatar": "运", "color": "coral"}]}, "tasks": [{"id": "T-001", "title": "项目立项", "owner": "pm", "phase": "项目启动", "status": "done", "progress": 100, "artifacts": [], "gate": null, "created": "2026-11-02 15:23", "updated": "2026-11-02 15:23"}, {"id": "T-002", "title": "粗需求梳理", "owner": "pd", "phase": "需求分析", "status": "done", "progress": 100, "artifacts": [], "gate": null, "created": "2026-11-02 15:23", "updated": "2026-11-02 15:23"}, {"id": "T-003", "title": "原型设计", "owner": "ui", "phase": "原型", "status": "doing", "progress": 40, "artifacts": [], "gate": null, "created": "2026-11-02 15:23", "updated": "2026-11-02 15:23"}], "messages": [{"id": "M001", "ts": "2026-11-02 15:23", "channel": "group", "from": "pm", "kind": "TASK", "task": "T-001", "text": "#T-001 立项：产出 01-立项书.md，含目标、范围边界、验收标准"}, {"id": "M002", "ts": "2026-11-02 15:23", "channel": "group", "from": "pm", "kind": "DELIVER", "task": "T-001", "text": "#T-001 交付 01-立项书.md｜范围 3 项：记账、分类统计、月度报表。明确不做：多账本、多人协作"}, {"id": "M003", "ts": "2026-11-02 15:23", "channel": "group", "from": "pm", "kind": "TASK", "task": "T-002", "text": "#T-002 派给 @产品经理：拆用户故事，验收=每条能对应一个可点的页面"}, {"id": "M004", "ts": "2026-11-02 15:23", "channel": "group", "from": "pd", "kind": "PROGRESS", "task": "T-002", "text": "#T-002 进度 70%，7 个用户故事已拆完，在补异常分支"}, {"id": "M005", "ts": "2026-11-02 15:23", "channel": "group", "from": "pd", "kind": "DELIVER", "task": "T-002", "text": "#T-002 交付 02-PRD-粗.md｜7 个用户故事，2 个挪到下一期"}, {"id": "M006", "ts": "2026-11-02 15:23", "channel": "group", "from": "boss", "kind": "BOSS", "task": "", "text": "我想加一个按周汇总的视图，不用很复杂"}, {"id": "M007", "ts": "2026-11-02 15:23", "channel": "group", "from": "pm", "kind": "PROGRESS", "task": "T-002", "text": "#T-002 已裁决：单用户。周汇总进下一期，本期先不做"}, {"id": "M008", "ts": "2026-11-02 15:23", "channel": "group", "from": "pm", "kind": "TASK", "task": "T-003", "text": "#T-003 派给 @UI设计：3 个主页面 + 空态与错误态，验收=能点通记账全流程"}, {"id": "M009", "ts": "2026-11-02 15:23", "channel": "group", "from": "ui", "kind": "PROGRESS", "task": "T-003", "text": "#T-003 进度 40%，首页与记账页布局完成，在补分类选择器"}, {"id": "M010", "ts": "2026-11-02 15:23", "channel": "dm:pd", "from": "pd", "kind": "CHALLENGE", "task": "", "text": "老板原话提到「给家里人一起记」，可能要多人协作。\n选项 A：单用户先做（快，首版 5 天）\n选项 B：直接做多用户（多 5 天，要账号体系）\n我建议 A，首版先验证记账本身是否好用。"}, {"id": "M011", "ts": "2026-11-02 15:23", "channel": "dm:pd", "from": "boss", "kind": "DECISION", "task": "", "text": "A"}, {"id": "M012", "ts": "2026-11-02 15:23", "channel": "dm:qa", "from": "qa", "kind": "RISK", "task": "", "text": "分类统计在数据少于 10 条时，图表会退化成一条线。不影响功能，建议加空状态文案，不阻塞上线。"}, {"id": "M013", "ts": "2026-11-02 15:23", "channel": "dm:arch", "from": "arch", "kind": "DECIDE", "task": "", "text": "工作台的形态要定一下。\n选项 A：构建期生成静态 HTML（零依赖，双击就开）\n选项 B：本地起服务实时写入（体验好，多一个进程）\n我建议 A。"}], "kinds": {"TASK": "派活", "PROGRESS": "进度", "DELIVER": "交付", "BOSS": "老板指令", "CHALLENGE": "方案分歧", "RISK": "风险预警", "DECIDE": "请求裁决", "DECISION": "老板裁决"}, "pending": ["M012", "M013"], "generated": "2026-11-02 15:23"};
 const LIVE = location.protocol === "http:" || location.protocol === "https:";
 const COLOR = {
   teal:{bg:"#9FE1CB",fg:"#04342C"}, blue:{bg:"#B5D4F4",fg:"#042C53"},
@@ -353,6 +353,17 @@ function renderOffice(){
 }
 
 /* ---------- 切换 ---------- */
+function hashChannel(){
+  const h = (location.hash || "").replace(/^#\/?/, "");
+  if (h === "office") return "office";
+  if (h.startsWith("dm:")) return h;
+  return "group";
+}
+function rememberChannel(ch){
+  try {
+    history.replaceState(null, "", ch === "group" ? location.pathname : "#" + ch);
+  } catch(e){}
+}
 function select(ch){
   current = ch;
   const isOffice = ch === "office";
@@ -382,7 +393,12 @@ function select(ch){
 
   renderSide();
   if (isOffice) renderOffice(); else renderChat();
+  rememberChannel(ch);
 }
+window.addEventListener("hashchange", () => {
+  const ch = hashChannel();
+  if (ch !== current) select(ch);
+});
 
 /* ---------- 模型档位 ---------- */
 function renderPop(){
@@ -492,7 +508,7 @@ document.addEventListener("click", () => document.getElementById("tierPop").clas
 })();
 
 if (LIVE) setInterval(refresh, 3000);
-select("group");
+select(hashChannel());
 </script>
 </body>
 </html>
